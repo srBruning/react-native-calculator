@@ -11,7 +11,7 @@ import { Display } from './Display'
 import { CalculatorCommonProps, DefaultCommonProps } from './interface'
 import { formatNumber } from './utils'
 
-enum ActionEnum {
+export enum ActionEnum {
   CLEAR,
   DIVIDE,
   MULTIPLY,
@@ -51,6 +51,10 @@ export interface CalculatorProps extends CalculatorCommonProps {
    * Hide display text field.
    */
   hideDisplay?: boolean
+
+  onlyInput?: boolean
+
+  initValue?: number
 }
 
 interface State {
@@ -82,10 +86,29 @@ export class Calculator extends React.Component<CalculatorProps, State> {
   constructor(props: CalculatorProps) {
     super(props)
     this.calculate = this.calculate.bind(this)
+    const { initValue } = this.props
+    let val = '';
+    if (initValue) {
+      val = initValue.toString();
+    }
+
+    console.log("#*###### initValue: " + val);
     this.state = {
-      text: '',
+      text: val,
       done: false
     }
+
+    if (initValue) {
+      val = initValue.toString();
+      this.stacks.push({
+        kind: StackKindEnum.SIGN,
+        text: val,
+        value: val,
+        trailing: ''
+      })
+    }
+    console.log("0 ### stacks -> " + JSON.stringify(this.stacks))
+    console.log("0 ### state -> " + JSON.stringify(this.state))
   }
 
   getButtonSize(window: LayoutRectangle): ButtonSize {
@@ -132,17 +155,41 @@ export class Calculator extends React.Component<CalculatorProps, State> {
   }
 
   render() {
-    const { style } = this.props
+    const { style, initValue } = this.props
+    let val = '';
+    if (initValue) {
+      val = initValue.toString();
+    }
+    console.log("1 ### render.stacks -> " + JSON.stringify(this.stacks))
+    console.log("1 ### render.state -> " + JSON.stringify(this.state))
     return (
       <View
         style={style}
         onLayout={e => {
           const btnSize = this.getButtonSize(e.nativeEvent.layout)
-          this.setState({ btnSize }, () => {
+          this.setState({ btnSize, text: val }, () => {
             if (this.display) {
               this.display.tryNewSize(true)
             }
           })
+          if (initValue && this.stacks.length <= 1) {
+            let stack = this.stacks[this.stacks.length - 1]
+            if (!stack) {
+              this.stacks.push({
+                kind: StackKindEnum.NUMBER,
+                text: val,
+                value: val,
+                trailing: ''
+              })
+            } else {
+              stack.kind = StackKindEnum.NUMBER;
+              stack.text = val;
+              stack.value = val;
+              stack.trailing = '';
+            }
+
+
+          }
         }}
       >
         {this.renderMain()}
@@ -151,6 +198,9 @@ export class Calculator extends React.Component<CalculatorProps, State> {
   }
 
   renderMain() {
+    console.log("2 ### renderMain.stacks -> " + JSON.stringify(this.stacks))
+    console.log("2 ### renderMain.state -> " + JSON.stringify(this.state))
+
     const { text, btnSize } = this.state
     const {
       decimalSeparator,
@@ -166,15 +216,15 @@ export class Calculator extends React.Component<CalculatorProps, State> {
       hasAcceptButton,
       hideDisplay,
       displayTextAlign,
-      noDecimal
+      noDecimal,
+      onlyInput,
     } = this.props
-
     const done = this.state.done && hasAcceptButton
 
     if (!btnSize) {
       return null
     }
-
+    console.log("2 *** renderMain--> " + text)
     return (
       <View>
         {!hideDisplay && (
@@ -200,7 +250,7 @@ export class Calculator extends React.Component<CalculatorProps, State> {
             />
           </View>
         )}
-        <View
+        {!onlyInput && (<View
           style={[
             Styles.row,
             hideDisplay
@@ -208,22 +258,26 @@ export class Calculator extends React.Component<CalculatorProps, State> {
               : undefined
           ]}
         >
-          {this.renderActionButton(btnSize, 'C', ActionEnum.CLEAR, true)}
-          {this.renderActionButton(btnSize, '/', ActionEnum.DIVIDE)}
-          {this.renderActionButton(btnSize, '*', ActionEnum.MULTIPLY)}
-          {this.renderActionButton(btnSize, '❮', ActionEnum.BACK)}
+
+          {!onlyInput && this.renderActionButton(btnSize, 'C', ActionEnum.CLEAR, true)}
+          {!onlyInput && this.renderActionButton(btnSize, '/', ActionEnum.DIVIDE)}
+          {!onlyInput && this.renderActionButton(btnSize, '*', ActionEnum.MULTIPLY)}
+          {!onlyInput && this.renderActionButton(btnSize, '❮', ActionEnum.BACK)}
         </View>
+        )}
         <View style={Styles.row}>
           {this.renderNumberButton(btnSize, '7', true)}
           {this.renderNumberButton(btnSize, '8')}
           {this.renderNumberButton(btnSize, '9')}
-          {this.renderActionButton(btnSize, '-', ActionEnum.MINUS)}
+          {!onlyInput && this.renderActionButton(btnSize, '-', ActionEnum.MINUS)}
+          {onlyInput && this.renderActionButton(btnSize, '❮', ActionEnum.BACK)}
         </View>
         <View style={Styles.row}>
           {this.renderNumberButton(btnSize, '4', true)}
           {this.renderNumberButton(btnSize, '5')}
           {this.renderNumberButton(btnSize, '6')}
-          {this.renderActionButton(btnSize, '+', ActionEnum.PLUS)}
+          {!onlyInput && this.renderActionButton(btnSize, '+', ActionEnum.PLUS)}
+          {onlyInput && this.renderNumberButton(btnSize, '')}
         </View>
         <View style={Styles.row}>
           <View style={{}}>
@@ -252,7 +306,7 @@ export class Calculator extends React.Component<CalculatorProps, State> {
               {
                 borderColor,
                 height: btnSize.height * 2,
-                backgroundColor: done
+                backgroundColor: done || onlyInput
                   ? acceptButtonBackgroundColor
                   : calcButtonBackgroundColor,
                 width: btnSize.width
@@ -262,7 +316,7 @@ export class Calculator extends React.Component<CalculatorProps, State> {
               color: done ? acceptButtonColor : calcButtonColor,
               fontSize: (fontSize as number) * 2
             }}
-            text={done ? '↲' : '='}
+            text={done || onlyInput ? '↲' : '='}
             onPress={this.calculate}
           />
         </View>
@@ -299,6 +353,9 @@ export class Calculator extends React.Component<CalculatorProps, State> {
         textStyle={{ color: numericButtonColor, fontSize }}
         text={value}
         onPress={() => {
+          if (value == '') {
+            return;
+          }
           if (this.calculated) {
             // clear answer replace with entered number
             this.calculated = false
