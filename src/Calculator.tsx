@@ -92,7 +92,6 @@ export class Calculator extends React.Component<CalculatorProps, State> {
       val = initValue.toString();
     }
 
-    console.log("#*###### initValue: " + val);
     this.state = {
       text: val,
       done: false
@@ -107,8 +106,6 @@ export class Calculator extends React.Component<CalculatorProps, State> {
         trailing: ''
       })
     }
-    console.log("0 ### stacks -> " + JSON.stringify(this.stacks))
-    console.log("0 ### state -> " + JSON.stringify(this.state))
   }
 
   getButtonSize(window: LayoutRectangle): ButtonSize {
@@ -160,8 +157,6 @@ export class Calculator extends React.Component<CalculatorProps, State> {
     if (initValue) {
       val = initValue.toString();
     }
-    console.log("1 ### render.stacks -> " + JSON.stringify(this.stacks))
-    console.log("1 ### render.state -> " + JSON.stringify(this.state))
     return (
       <View
         style={style}
@@ -198,8 +193,6 @@ export class Calculator extends React.Component<CalculatorProps, State> {
   }
 
   renderMain() {
-    console.log("2 ### renderMain.stacks -> " + JSON.stringify(this.stacks))
-    console.log("2 ### renderMain.state -> " + JSON.stringify(this.state))
 
     const { text, btnSize } = this.state
     const {
@@ -224,7 +217,6 @@ export class Calculator extends React.Component<CalculatorProps, State> {
     if (!btnSize) {
       return null
     }
-    console.log("2 *** renderMain--> " + text)
     return (
       <View>
         {!hideDisplay && (
